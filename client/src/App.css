@@ -1,8 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-white-50: #e5e5ff;
+  --color-white-100: #ccccff;
+  --color-white-200: #9999ff;
+  --color-white-300: #6666ff;
+  --color-white-400: #3333ff;
+  --color-white-500: #0000ff;
+  --color-white-600: #0000cc;
+  --color-white-700: #000099;
+  --color-white-800: #000066;
+  --color-white-900: #000033;
+  --color-white-950: #000024;
+  
+  --color-pale-sky-50: #e5f5ff;
+  --color-pale-sky-100: #ccebff;
+  --color-pale-sky-200: #99d8ff;
+  --color-pale-sky-300: #66c4ff;
+  --color-pale-sky-400: #33b1ff;
+  --color-pale-sky-500: #009dff;
+  --color-pale-sky-600: #007ecc;
+  --color-pale-sky-700: #005e99;
+  --color-pale-sky-800: #003f66;
+  --color-pale-sky-900: #001f33;
+  --color-pale-sky-950: #001624;
+  
+  --color-apricot-cream-50: #fff5e6;
+  --color-apricot-cream-100: #feeacd;
+  --color-apricot-cream-200: #fed99b;
+  --color-apricot-cream-300: #fed18c;
+  --color-apricot-cream-400: #fdad35;
+  --color-apricot-cream-500: #fc9803;
+  --color-apricot-cream-600: #ca7a02;
+  --color-apricot-cream-700: #975b02;
+  --color-apricot-cream-800: #653d01;
+  --color-apricot-cream-900: #321e01;
+  --color-apricot-cream-950: #231500;
+
+  --color-tomato-50: #ffe9e6;
+  --color-tomato-100: #ffd3cc;
+  --color-tomato-200: #fea79a;
+  --color-tomato-300: #fe654f;
+  --color-tomato-400: #fe4f34;
+  --color-tomato-500: #fe2301;
+  --color-tomato-600: #cb1c01;
+  --color-tomato-700: #981501;
+  --color-tomato-800: #650e01;
+  --color-tomato-900: #330700;
+  --color-tomato-950: #240500;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
-  text-align: center;
 }
 
 .logo {

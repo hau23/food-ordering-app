@@ -18,7 +18,7 @@ CREATE TABLE restaurants (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     address TEXT NOT NULL,
-    phone VARCHAR(20),
+    telephone VARCHAR(20),
     cuisine_type VARCHAR(50),
     rating DECIMAL(2,1) DEFAULT 0.0,
     is_active BOOLEAN DEFAULT true,

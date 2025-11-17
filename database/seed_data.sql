@@ -5,9 +5,9 @@ INSERT INTO users (name, email, password, phone, address, role) VALUES
 ('Admin User', 'admin@foodapp.com', '$2a$10$hashedpassword', '1112223333', '789 Admin Rd', 'admin');
 
 -- Insert sample restaurants
-INSERT INTO restaurants (owner_id, name, description, address, phone, cuisine_type, rating) VALUES
-(2, 'Pizza Palace', 'Best pizza in town!', '100 Pizza Street', '5551234567', 'Italian', 4.5),
-(2, 'Burger Heaven', 'Juicy burgers made fresh', '200 Burger Lane', '5559876543', 'American', 4.2);
+INSERT INTO restaurants (owner_id, name, description, address, delivery_time, cuisine_type, rating, delivery_time) VALUES
+(2, 'Pizza Palace', 'Best pizza in town!', '100 Pizza Street', '2899 5322', 'Italian', 4.5, '30-45 mins'),
+(2, 'Burger Heaven', 'Juicy burgers made fresh', '200 Burger Lane', '3456 1234', 'American', 4.2, '30-45 mins');
 
 -- Insert sample menu items
 INSERT INTO menu_items (restaurant_id, name, description, price, category, is_available) VALUES
