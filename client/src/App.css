@@ -12,7 +12,7 @@
   --color-white-800: #000066;
   --color-white-900: #000033;
   --color-white-950: #000024;
-  
+
   --color-pale-sky-50: #e5f5ff;
   --color-pale-sky-100: #ccebff;
   --color-pale-sky-200: #99d8ff;
@@ -24,7 +24,7 @@
   --color-pale-sky-800: #003f66;
   --color-pale-sky-900: #001f33;
   --color-pale-sky-950: #001624;
-  
+
   --color-apricot-cream-50: #fff5e6;
   --color-apricot-cream-100: #feeacd;
   --color-apricot-cream-200: #fed99b;
@@ -48,12 +48,9 @@
   --color-tomato-800: #650e01;
   --color-tomato-900: #330700;
   --color-tomato-950: #240500;
-}
 
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  --color-blue-100: #8FABD4;
+  --color-blue-200: #4A70A9;
 }
 
 .logo {
@@ -62,9 +59,11 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -73,6 +72,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -90,4 +90,25 @@
 
 .read-the-docs {
   color: #888;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #8FABD4;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+
+button:hover {
+  border-color: #4A70A9;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
 }
