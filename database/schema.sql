@@ -66,8 +66,28 @@ CREATE TABLE order_items (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create Cart table
+CREATE TABLE carts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    restaurant_id INTEGER REFERENCES restaurants(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Cart Items table
+CREATE TABLE cart_items (
+    id SERIAL PRIMARY KEY,
+    cart_id INTEGER REFERENCES carts(id) ON DELETE CASCADE,
+    menu_item_id INTEGER REFERENCES menu_items(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for performance optimization
 CREATE INDEX idx_orders_user_id ON orders(user_id);
 CREATE INDEX idx_orders_restaurant_id ON orders(restaurant_id);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_menu_items_restaurant_id ON menu_items(restaurant_id);
+CREATE INDEX idx_carts_user_id ON carts(user_id);
+CREATE INDEX idx_cart_items_cart_id ON cart_items(cart_id);

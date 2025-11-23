@@ -4,6 +4,7 @@ require('dotenv').config();
 
 // Import routes
 const restaurantRoutes = require('./routes/restaurantRoutes');
+const cartRoutes = require('./routes/cartRoutes');
 
 // Test database connection
 const pool = require('./config/database');
@@ -30,5 +31,6 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/cart', cartRoutes);
 
 module.exports = app;

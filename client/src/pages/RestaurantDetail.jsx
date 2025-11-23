@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useCart } from '../context/CartContext'
 
 function RestaurantDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { addToCart } = useCart()
   const [restaurant, setRestaurant] = useState(null)
   const [menuItems, setMenuItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [addingToCart, setAddingToCart] = useState(null)
+  const [quantities, setQuantities] = useState({})
 
   useEffect(() => {
     fetchRestaurantDetails()
@@ -41,6 +45,36 @@ function RestaurantDetail() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const getQuantity = (itemId) => {
+    return quantities[itemId] || 1
+  }
+
+  const updateQuantity = (itemId, quantity) => {
+    if (quantity < 1) return
+    setQuantities(prev => ({
+      ...prev,
+      [itemId]: quantity
+    }))
+  }
+
+  const handleAddToCart = async (item) => {
+    setAddingToCart(item.id)
+    const quantity = getQuantity(item.id)
+
+    // Add item with specified quantity
+    for (let i = 0; i < quantity; i++) {
+      await addToCart(item, restaurant.id)
+    }
+
+    // Reset quantity back to 1
+    setQuantities(prev => ({
+      ...prev,
+      [item.id]: 1
+    }))
+
+    setTimeout(() => setAddingToCart(null), 500)
   }
 
   // Group menu items by category
@@ -179,8 +213,40 @@ function RestaurantDetail() {
                           {item.description}
                         </p>
                       )}
-                      <button className="bg-blue-100 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                        Add to Cart
+
+                      {/* Quantity controls */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-sm text-gray-600">Quantity:</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item.id, getQuantity(item.id) - 1)}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-bold"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={getQuantity(item.id)}
+                            onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
+                            className="w-16 text-center border border-gray-300 rounded px-2 py-1 text-sm font-semibold text-black"
+                          />
+                          <button
+                            onClick={() => updateQuantity(item.id, getQuantity(item.id) + 1)}
+                            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-bold"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Add to cart button */}
+                      <button
+                        onClick={() => handleAddToCart(item)}
+                        disabled={addingToCart === item.id}
+                        className="bg-blue-100 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 w-full"
+                      >
+                        {addingToCart === item.id ? 'Adding...' : 'Add to Cart'}
                       </button>
                     </div>
                   ))}
