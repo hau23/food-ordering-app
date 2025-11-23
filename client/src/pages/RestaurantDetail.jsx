@@ -18,7 +18,7 @@ function RestaurantDetail() {
       setLoading(true)
 
       // Fetch restaurant details
-      const restaurantResponse = await fetch(`http://localhost:5000/api/restaurants/${id}`)
+      const restaurantResponse = await fetch(`http://localhost:3001/api/restaurants/${id}`)
       const restaurantData = await restaurantResponse.json()
 
       if (!restaurantData.success) {
@@ -29,7 +29,7 @@ function RestaurantDetail() {
       setRestaurant(restaurantData.data)
 
       // Fetch menu items
-      const menuResponse = await fetch(`http://localhost:5000/api/restaurants/${id}/menu`)
+      const menuResponse = await fetch(`http://localhost:3001/api/restaurants/${id}/menu`)
       const menuData = await menuResponse.json()
 
       if (menuData.success) {

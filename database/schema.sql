@@ -22,6 +22,7 @@ CREATE TABLE restaurants (
     cuisine_type VARCHAR(50),
     rating DECIMAL(2,1) DEFAULT 0.0,
     is_active BOOLEAN DEFAULT true,
+    delivery_time VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     -- updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

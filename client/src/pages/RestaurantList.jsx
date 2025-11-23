@@ -13,7 +13,7 @@ function RestaurantList() {
   const fetchRestaurants = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5000/api/restaurants')
+      const response = await fetch('http://localhost:3001/api/restaurants')
       const data = await response.json()
 
       if (data.success) {
