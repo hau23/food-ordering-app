@@ -123,8 +123,16 @@ CREATE TABLE orders (
   -- Timestamps
   placed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   estimated_delivery TIMESTAMP WITH TIME ZONE,
+  delivered_at TIMESTAMP WITH TIME ZONE,
   cancelled_at TIMESTAMP WITH TIME ZONE,
   cancellation_reason TEXT,
+
+  -- Feedback (for delivered orders)
+  delivery_condition VARCHAR(50), -- 'good' or 'unsatisfactory'
+  restaurant_rating INTEGER CHECK (restaurant_rating >= 1 AND restaurant_rating <= 5),
+  delivery_rating INTEGER CHECK (delivery_rating >= 1 AND delivery_rating <= 5),
+  feedback_comment TEXT,
+  feedback_submitted_at TIMESTAMP WITH TIME ZONE,
 
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -141,6 +149,17 @@ CREATE POLICY "Users can manage their own orders" ON orders
 CREATE INDEX idx_orders_user ON orders(user_id);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_placed_at ON orders(placed_at DESC);
+```
+
+**If you already created the orders table**, run this to add feedback fields:
+```sql
+ALTER TABLE orders
+  ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE,
+  ADD COLUMN IF NOT EXISTS delivery_condition VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS restaurant_rating INTEGER CHECK (restaurant_rating >= 1 AND restaurant_rating <= 5),
+  ADD COLUMN IF NOT EXISTS delivery_rating INTEGER CHECK (delivery_rating >= 1 AND delivery_rating <= 5),
+  ADD COLUMN IF NOT EXISTS feedback_comment TEXT,
+  ADD COLUMN IF NOT EXISTS feedback_submitted_at TIMESTAMP WITH TIME ZONE;
 ```
 
 ### Create Order Items Table

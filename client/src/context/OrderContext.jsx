@@ -115,12 +115,18 @@ export function OrderProvider({ children }) {
         deliveryNotes: order.delivery_notes,
         placedAt: order.placed_at,
         estimatedDelivery: order.estimated_delivery,
+        deliveredAt: order.delivered_at,
         total: parseFloat(order.total),
         subtotal: parseFloat(order.subtotal),
         deliveryFee: parseFloat(order.delivery_fee),
         paymentMethod: order.payment_method,
         cancelledAt: order.cancelled_at,
-        cancellationReason: order.cancellation_reason
+        cancellationReason: order.cancellation_reason,
+        deliveryCondition: order.delivery_condition,
+        restaurantRating: order.restaurant_rating,
+        deliveryRating: order.delivery_rating,
+        feedbackComment: order.feedback_comment,
+        feedbackSubmittedAt: order.feedback_submitted_at
       }
     } catch (error) {
       console.error('Error fetching order:', error)
@@ -206,6 +212,38 @@ export function OrderProvider({ children }) {
     }
   }
 
+  const submitOrderFeedback = async (orderId, feedbackData) => {
+    try {
+      setLoading(true)
+
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          delivery_condition: feedbackData.deliveryCondition,
+          restaurant_rating: feedbackData.restaurantRating,
+          delivery_rating: feedbackData.deliveryRating,
+          feedback_comment: feedbackData.feedbackComment || null,
+          feedback_submitted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId)
+        .eq('user_id', USER_ID)
+        .eq('status', 'delivered') // Only allow feedback for delivered orders
+
+      if (error) {
+        console.error('Error submitting feedback:', error)
+        return { success: false, error: error.message }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Error submitting feedback:', error)
+      return { success: false, error: error.message }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <OrderContext.Provider value={{
       createOrder,
@@ -213,6 +251,7 @@ export function OrderProvider({ children }) {
       updateOrderStatus,
       cancelOrder,
       getAllOrders,
+      submitOrderFeedback,
       loading
     }}>
       {children}

@@ -5,13 +5,23 @@ import { useOrder } from '../context/OrderContext'
 function TrackOrder() {
   const { orderId } = useParams()
   const navigate = useNavigate()
-  const { getOrder, cancelOrder } = useOrder()
+  const { getOrder, cancelOrder, submitOrderFeedback } = useOrder()
 
   // Get order data from context
   const [order, setOrder] = useState(null)
   const [loadingOrder, setLoadingOrder] = useState(true)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+
+  // Feedback form state
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false)
+  const [submittingFeedback, setSubmittingFeedback] = useState(false)
+  const [feedbackData, setFeedbackData] = useState({
+    deliveryCondition: '',
+    restaurantRating: 0,
+    deliveryRating: 0,
+    feedbackComment: ''
+  })
 
   useEffect(() => {
     fetchOrder()
@@ -43,6 +53,54 @@ function TrackOrder() {
 
   const canCancelOrder = () => {
     return order && ['pending', 'confirmed'].includes(order.status)
+  }
+
+  const handleSubmitFeedback = async () => {
+    // Validate feedback
+    if (!feedbackData.deliveryCondition) {
+      alert('Please select the delivery condition')
+      return
+    }
+    if (feedbackData.restaurantRating === 0) {
+      alert('Please rate the restaurant')
+      return
+    }
+    if (feedbackData.deliveryRating === 0) {
+      alert('Please rate the delivery service')
+      return
+    }
+
+    setSubmittingFeedback(true)
+    const result = await submitOrderFeedback(orderId, feedbackData)
+
+    if (result.success) {
+      await fetchOrder()
+      setShowFeedbackForm(false)
+      alert('Thank you for your feedback!')
+    } else {
+      alert('Failed to submit feedback. Please try again.')
+    }
+    setSubmittingFeedback(false)
+  }
+
+  const StarRating = ({ rating, onRatingChange, readonly = false }) => {
+    return (
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => !readonly && onRatingChange(star)}
+            disabled={readonly}
+            className={`text-2xl transition-transform ${
+              readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'
+            }`}
+          >
+            {star <= rating ? '⭐' : '☆'}
+          </button>
+        ))}
+      </div>
+    )
   }
 
   const statusSteps = [
@@ -288,6 +346,180 @@ function TrackOrder() {
                       Reason: {order.cancellationReason}
                     </p>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Delivered - Request Feedback */}
+            {order.status === 'delivered' && !order.feedbackSubmittedAt && !showFeedbackForm && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-bold text-green-800 mb-2">🎉 Order Delivered!</h3>
+                  <p className="text-sm text-green-700">
+                    Your order was delivered on {formatDate(order.deliveredAt)} at {formatTime(order.deliveredAt)}
+                  </p>
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">How was your order?</h3>
+                <button
+                  onClick={() => setShowFeedbackForm(true)}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg hover:bg-blue-700"
+                >
+                  Leave Feedback
+                </button>
+              </div>
+            )}
+
+            {/* Feedback Form */}
+            {order.status === 'delivered' && showFeedbackForm && !order.feedbackSubmittedAt && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Your Feedback</h3>
+
+                {/* Delivery Condition */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Delivery Condition *
+                  </label>
+                  <div className="space-y-2">
+                    <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      feedbackData.deliveryCondition === 'good'
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-300 hover:bg-gray-50'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="condition"
+                        value="good"
+                        checked={feedbackData.deliveryCondition === 'good'}
+                        onChange={(e) => setFeedbackData({ ...feedbackData, deliveryCondition: e.target.value })}
+                        className="w-4 h-4"
+                      />
+                      <span className="ml-2 text-sm font-medium text-gray-800">✅ Good - Everything arrived perfectly</span>
+                    </label>
+                    <label className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                      feedbackData.deliveryCondition === 'unsatisfactory'
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-300 hover:bg-gray-50'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="condition"
+                        value="unsatisfactory"
+                        checked={feedbackData.deliveryCondition === 'unsatisfactory'}
+                        onChange={(e) => setFeedbackData({ ...feedbackData, deliveryCondition: e.target.value })}
+                        className="w-4 h-4"
+                      />
+                      <span className="ml-2 text-sm font-medium text-gray-800">❌ Unsatisfactory - Issues with the order</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Restaurant Rating */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Rate the Restaurant *
+                  </label>
+                  <StarRating
+                    rating={feedbackData.restaurantRating}
+                    onRatingChange={(rating) => setFeedbackData({ ...feedbackData, restaurantRating: rating })}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {feedbackData.restaurantRating === 0 && 'Select a rating'}
+                    {feedbackData.restaurantRating === 1 && 'Poor'}
+                    {feedbackData.restaurantRating === 2 && 'Fair'}
+                    {feedbackData.restaurantRating === 3 && 'Good'}
+                    {feedbackData.restaurantRating === 4 && 'Very Good'}
+                    {feedbackData.restaurantRating === 5 && 'Excellent'}
+                  </p>
+                </div>
+
+                {/* Delivery Rating */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Rate the Delivery Service *
+                  </label>
+                  <StarRating
+                    rating={feedbackData.deliveryRating}
+                    onRatingChange={(rating) => setFeedbackData({ ...feedbackData, deliveryRating: rating })}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {feedbackData.deliveryRating === 0 && 'Select a rating'}
+                    {feedbackData.deliveryRating === 1 && 'Poor'}
+                    {feedbackData.deliveryRating === 2 && 'Fair'}
+                    {feedbackData.deliveryRating === 3 && 'Good'}
+                    {feedbackData.deliveryRating === 4 && 'Very Good'}
+                    {feedbackData.deliveryRating === 5 && 'Excellent'}
+                  </p>
+                </div>
+
+                {/* Comments */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Additional Comments (Optional)
+                  </label>
+                  <textarea
+                    value={feedbackData.feedbackComment}
+                    onChange={(e) => setFeedbackData({ ...feedbackData, feedbackComment: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    rows="3"
+                    placeholder="Tell us more about your experience..."
+                  />
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowFeedbackForm(false)}
+                    disabled={submittingFeedback}
+                    className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitFeedback}
+                    disabled={submittingFeedback}
+                    className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {submittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Feedback Already Submitted */}
+            {order.status === 'delivered' && order.feedbackSubmittedAt && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-blue-800 mb-3">Thank You for Your Feedback!</h3>
+
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-gray-600 mb-1">Delivery Condition</p>
+                      <p className="font-semibold text-gray-800">
+                        {order.deliveryCondition === 'good' ? '✅ Good' : '❌ Unsatisfactory'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-gray-600 mb-1">Restaurant Rating</p>
+                      <StarRating rating={order.restaurantRating} readonly={true} />
+                    </div>
+
+                    <div>
+                      <p className="text-gray-600 mb-1">Delivery Service Rating</p>
+                      <StarRating rating={order.deliveryRating} readonly={true} />
+                    </div>
+
+                    {order.feedbackComment && (
+                      <div>
+                        <p className="text-gray-600 mb-1">Your Comments</p>
+                        <p className="font-medium text-gray-800 italic">"{order.feedbackComment}"</p>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-gray-500 pt-2 border-t">
+                      Submitted on {formatDate(order.feedbackSubmittedAt)} at {formatTime(order.feedbackSubmittedAt)}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
