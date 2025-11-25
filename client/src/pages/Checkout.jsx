@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useOrder } from '../context/OrderContext'
 import { useLocation } from '../context/LocationContext'
+import { supabase } from '../lib/supabase'
 
 function Checkout() {
   const navigate = useNavigate()
@@ -25,6 +26,28 @@ function Checkout() {
   })
 
   const [errors, setErrors] = useState({})
+  const [restaurantData, setRestaurantData] = useState(null)
+
+  // Fetch restaurant data
+  useEffect(() => {
+    const fetchRestaurantData = async () => {
+      if (cart.restaurant_id) {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('id', cart.restaurant_id)
+          .single()
+
+        if (error) {
+          console.error('Error fetching restaurant:', error)
+        } else {
+          setRestaurantData(data)
+        }
+      }
+    }
+
+    fetchRestaurantData()
+  }, [cart.restaurant_id])
 
   // Auto-fill address from location context
   useEffect(() => {
@@ -84,10 +107,11 @@ function Checkout() {
 
     // Create order with all checkout data
     const orderData = {
+      restaurant_id: cart.restaurant_id,
       restaurant: {
         name: cart.restaurant_name || 'Restaurant',
-        phone: '(123) 456-7890', // TODO: Get from restaurant data
-        address: '100 Restaurant Street' // TODO: Get from restaurant data
+        phone: restaurantData?.telephone || 'N/A',
+        address: restaurantData?.address || 'N/A'
       },
       items: cart.items.map(item => ({
         menu_item_id: item.cart_item_id,

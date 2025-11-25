@@ -54,11 +54,13 @@ export function CartProvider({ children }) {
 
         const total = items.reduce((sum, item) => sum + item.subtotal, 0)
         const restaurant_name = cartItems[0]?.menu_items?.restaurants?.name || null
+        const restaurant_id = cartItems[0]?.menu_items?.restaurant_id || null
 
         setCart({
           items,
           total,
           restaurant_name,
+          restaurant_id,
         })
       } else {
         setCart({ items: [], total: 0, restaurant_name: null })
