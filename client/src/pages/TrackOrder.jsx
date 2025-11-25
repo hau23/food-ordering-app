@@ -5,46 +5,53 @@ import { useOrder } from '../context/OrderContext'
 function TrackOrder() {
   const { orderId } = useParams()
   const navigate = useNavigate()
-  const { getOrder } = useOrder()
+  const { getOrder, cancelOrder } = useOrder()
 
   // Get order data from context
   const [order, setOrder] = useState(null)
+  const [loadingOrder, setLoadingOrder] = useState(true)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
-    const orderData = getOrder(orderId)
+    fetchOrder()
+  }, [orderId])
+
+  const fetchOrder = async () => {
+    setLoadingOrder(true)
+    const orderData = await getOrder(orderId)
     if (orderData) {
       setOrder(orderData)
-    } else {
-      // Order not found, show mock data or redirect
-      setOrder({
-        id: orderId || '12345',
-        status: 'preparing',
-        restaurant: {
-          name: 'Pizza Palace',
-          phone: '(123) 456-7890',
-          address: '100 Pizza Street'
-        },
-        items: [
-          { id: 1, name: 'Margherita Pizza', quantity: 2, price: 12.99 },
-          { id: 2, name: 'Caesar Salad', quantity: 1, price: 7.99 }
-        ],
-        deliveryAddress: '123 Main Street, Apartment 4B, San Francisco, CA 94102',
-        customerName: 'John Doe',
-        customerPhone: '(555) 123-4567',
-        placedAt: new Date(Date.now() - 1800000).toISOString(),
-        estimatedDelivery: new Date(Date.now() + 1200000).toISOString(),
-        total: 38.97,
-        paymentMethod: 'Cash on Delivery'
-      })
     }
-  }, [orderId, getOrder])
+    setLoadingOrder(false)
+  }
+
+  const handleCancelOrder = async () => {
+    setCancelling(true)
+    const result = await cancelOrder(orderId)
+
+    if (result.success) {
+      // Refresh order data
+      await fetchOrder()
+      setShowCancelModal(false)
+      alert('Order cancelled successfully')
+    } else {
+      alert('Failed to cancel order. It may have already been prepared or is in transit.')
+    }
+    setCancelling(false)
+  }
+
+  const canCancelOrder = () => {
+    return order && ['pending', 'confirmed'].includes(order.status)
+  }
 
   const statusSteps = [
     { key: 'pending', label: 'Order Placed', icon: '📝' },
     { key: 'confirmed', label: 'Confirmed', icon: '✅' },
     { key: 'preparing', label: 'Preparing', icon: '👨‍🍳' },
     { key: 'out_for_delivery', label: 'Out for Delivery', icon: '🚚' },
-    { key: 'delivered', label: 'Delivered', icon: '✨' }
+    { key: 'delivered', label: 'Delivered', icon: '✨' },
+    { key: 'cancelled', label: 'Cancelled', icon: '❌' }
   ]
 
   const getCurrentStepIndex = () => {
@@ -99,42 +106,49 @@ function TrackOrder() {
 
             {/* Status Timeline */}
             <div className="mb-8">
-              <div className="relative">
-                {/* Progress Line */}
-                <div className="absolute top-8 left-0 right-0 h-1 bg-gray-200">
-                  <div
-                    className="h-full bg-blue-400 transition-all duration-500"
-                    style={{ width: `${(getCurrentStepIndex() / (statusSteps.length - 1)) * 100}%` }}
-                  />
+              {order.status === 'cancelled' ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                  <div className="text-5xl mb-3">❌</div>
+                  <h3 className="text-xl font-bold text-red-800">Order Cancelled</h3>
                 </div>
+              ) : (
+                <div className="relative">
+                  {/* Progress Line */}
+                  <div className="absolute top-8 left-0 right-0 h-1 bg-gray-200">
+                    <div
+                      className="h-full bg-blue-400 transition-all duration-500"
+                      style={{ width: `${(getCurrentStepIndex() / (statusSteps.length - 2)) * 100}%` }}
+                    />
+                  </div>
 
-                {/* Steps */}
-                <div className="relative flex justify-between">
-                  {statusSteps.map((step, index) => {
-                    const isCompleted = index <= getCurrentStepIndex()
-                    const isCurrent = index === getCurrentStepIndex()
+                  {/* Steps - exclude cancelled status from timeline */}
+                  <div className="relative flex justify-between">
+                    {statusSteps.filter(s => s.key !== 'cancelled').map((step, index) => {
+                      const isCompleted = index <= getCurrentStepIndex()
+                      const isCurrent = index === getCurrentStepIndex()
 
-                    return (
-                      <div key={step.key} className="flex flex-col items-center">
-                        <div
-                          className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-2 transition-all ${
-                            isCompleted
-                              ? 'bg-blue-400 shadow-lg'
-                              : 'bg-gray-200'
-                          } ${isCurrent ? 'ring-4 ring-blue-200 scale-110' : ''}`}
-                        >
-                          {step.icon}
+                      return (
+                        <div key={step.key} className="flex flex-col items-center">
+                          <div
+                            className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-2 transition-all ${
+                              isCompleted
+                                ? 'bg-blue-400 shadow-lg'
+                                : 'bg-gray-200'
+                            } ${isCurrent ? 'ring-4 ring-blue-200 scale-110' : ''}`}
+                          >
+                            {step.icon}
+                          </div>
+                          <p className={`text-xs md:text-sm font-medium text-center max-w-[80px] ${
+                            isCompleted ? 'text-gray-800' : 'text-gray-400'
+                          }`}>
+                            {step.label}
+                          </p>
                         </div>
-                        <p className={`text-xs md:text-sm font-medium text-center max-w-[80px] ${
-                          isCompleted ? 'text-gray-800' : 'text-gray-400'
-                        }`}>
-                          {step.label}
-                        </p>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Current Status Message */}
@@ -151,6 +165,7 @@ function TrackOrder() {
                     {order.status === 'out_for_delivery' && 'Your order is on the way!'}
                     {order.status === 'delivered' && 'Enjoy your meal!'}
                     {order.status === 'pending' && 'We received your order'}
+                    {order.status === 'cancelled' && 'This order has been cancelled'}
                   </p>
                 </div>
               </div>
@@ -247,6 +262,36 @@ function TrackOrder() {
               </div>
             </div>
 
+            {/* Cancel Order */}
+            {canCancelOrder() && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-3">Cancel Order</h3>
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg hover:bg-red-700"
+                >
+                  Cancel This Order
+                </button>
+              </div>
+            )}
+
+            {/* Cancelled Status */}
+            {order.status === 'cancelled' && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-red-800 mb-2">Order Cancelled</h3>
+                  <p className="text-sm text-red-600">
+                    This order was cancelled on {formatDate(order.cancelledAt)} at {formatTime(order.cancelledAt)}
+                  </p>
+                  {order.cancellationReason && (
+                    <p className="text-sm text-red-600 mt-2">
+                      Reason: {order.cancellationReason}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Need Help */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <h3 className="text-lg font-bold text-gray-800 mb-3">Need Help?</h3>
@@ -257,6 +302,34 @@ function TrackOrder() {
           </div>
         </div>
       </div>
+
+      {/* Cancel Order Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Cancel Order?</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to cancel this order? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={cancelling}
+                className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={cancelling}
+                className="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

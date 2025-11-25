@@ -91,6 +91,82 @@ CREATE INDEX idx_cart_items_user ON cart_items(user_id);
 CREATE INDEX idx_cart_items_menu_item ON cart_items(menu_item_id);
 ```
 
+### Create Orders Table
+```sql
+CREATE TABLE orders (
+  id VARCHAR(50) PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  restaurant_id BIGINT REFERENCES restaurants(id),
+  restaurant_name VARCHAR(255),
+  restaurant_phone VARCHAR(50),
+  restaurant_address TEXT,
+
+  -- Customer details
+  customer_name VARCHAR(255) NOT NULL,
+  customer_email VARCHAR(255),
+  customer_phone VARCHAR(50) NOT NULL,
+  delivery_address TEXT NOT NULL,
+  delivery_notes TEXT,
+
+  -- Order details
+  status VARCHAR(50) NOT NULL DEFAULT 'pending',
+  -- Status values: pending, confirmed, preparing, out_for_delivery, delivered, cancelled
+
+  -- Pricing
+  subtotal DECIMAL(10,2) NOT NULL,
+  delivery_fee DECIMAL(10,2) NOT NULL DEFAULT 5.00,
+  total DECIMAL(10,2) NOT NULL,
+
+  -- Payment
+  payment_method VARCHAR(50) NOT NULL,
+
+  -- Timestamps
+  placed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  estimated_delivery TIMESTAMP WITH TIME ZONE,
+  cancelled_at TIMESTAMP WITH TIME ZONE,
+  cancellation_reason TEXT,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+-- Create policy to allow users to manage their own orders
+CREATE POLICY "Users can manage their own orders" ON orders
+  FOR ALL USING (true);
+
+-- Create indexes
+CREATE INDEX idx_orders_user ON orders(user_id);
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_placed_at ON orders(placed_at DESC);
+```
+
+### Create Order Items Table
+```sql
+CREATE TABLE order_items (
+  id BIGSERIAL PRIMARY KEY,
+  order_id VARCHAR(50) NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  menu_item_id BIGINT REFERENCES menu_items(id),
+  name VARCHAR(255) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  quantity INTEGER NOT NULL,
+  image_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+
+-- Create policy to allow public read access
+CREATE POLICY "Users can view order items" ON order_items
+  FOR ALL USING (true);
+
+-- Create index
+CREATE INDEX idx_order_items_order ON order_items(order_id);
+```
+
 ## 4. Insert Sample Data (Optional)
 
 ### Sample Restaurant

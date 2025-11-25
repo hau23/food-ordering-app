@@ -90,10 +90,11 @@ function Checkout() {
         address: '100 Restaurant Street' // TODO: Get from restaurant data
       },
       items: cart.items.map(item => ({
-        id: item.cart_item_id,
+        menu_item_id: item.cart_item_id,
         name: item.name,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        image_url: item.image_url
       })),
       deliveryAddress: `${formData.address}, ${formData.city}`,
       customerName: formData.fullName,
@@ -103,18 +104,21 @@ function Checkout() {
       total: parseFloat(cart.total || 0) + 5, // Add delivery fee
       subtotal: parseFloat(cart.total || 0),
       deliveryFee: 5,
-      paymentMethod: formData.paymentMethod === 'cash' ? 'Cash on Delivery' : 'Credit/Debit Card',
-      cardDetails: formData.paymentMethod === 'card' ? {
-        lastFourDigits: formData.cardNumber.slice(-4)
-      } : null
+      paymentMethod: formData.paymentMethod === 'cash' ? 'Cash on Delivery' : 'Credit/Debit Card'
     }
 
-    // Save order to context
-    createOrder(orderId, orderData)
+    // Save order to Supabase
+    const result = await createOrder(orderId, orderData)
 
-    // Clear cart and navigate to tracking page
-    clearCart()
-    navigate(`/track-order/${orderId}`)
+    if (result.success) {
+      // Clear cart and navigate to tracking page
+      await clearCart()
+      navigate(`/track-order/${orderId}`)
+    } else {
+      // Show error message
+      alert('Failed to create order. Please try again.')
+      console.error('Order creation failed:', result.error)
+    }
   }
 
   if (!cart.items || cart.items.length === 0) {
