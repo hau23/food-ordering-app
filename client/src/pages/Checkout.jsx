@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { useOrder } from '../context/OrderContext'
+import { useLocation } from '../context/LocationContext'
 
 function Checkout() {
   const navigate = useNavigate()
   const { cart, clearCart } = useCart()
+  const { createOrder } = useOrder()
+  const { location } = useLocation()
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -21,6 +25,17 @@ function Checkout() {
   })
 
   const [errors, setErrors] = useState({})
+
+  // Auto-fill address from location context
+  useEffect(() => {
+    if (location && !formData.address && !formData.city) {
+      setFormData(prev => ({
+        ...prev,
+        address: location.street || '',
+        city: location.district || location.city || ''
+      }))
+    }
+  }, [location, formData.address, formData.city])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -45,8 +60,7 @@ function Checkout() {
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid'
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required'
     if (!formData.address.trim()) newErrors.address = 'Delivery address is required'
-    if (!formData.city.trim()) newErrors.city = 'City is required'
-    if (!formData.zipCode.trim()) newErrors.zipCode = 'ZIP code is required'
+    if (!formData.city.trim()) newErrors.city = 'District is required'
 
     if (formData.paymentMethod === 'card') {
       if (!formData.cardNumber.trim()) newErrors.cardNumber = 'Card number is required'
@@ -65,22 +79,54 @@ function Checkout() {
       return
     }
 
-    // TODO: Submit order to backend
-    alert('Order placed successfully! (Backend integration coming soon)')
+    // Generate a random order ID
+    const orderId = Math.random().toString(36).substring(2, 9).toUpperCase()
+
+    // Create order with all checkout data
+    const orderData = {
+      restaurant: {
+        name: cart.restaurant_name || 'Restaurant',
+        phone: '(123) 456-7890', // TODO: Get from restaurant data
+        address: '100 Restaurant Street' // TODO: Get from restaurant data
+      },
+      items: cart.items.map(item => ({
+        id: item.cart_item_id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      deliveryAddress: `${formData.address}, ${formData.city}`,
+      customerName: formData.fullName,
+      customerPhone: formData.phone,
+      customerEmail: formData.email,
+      deliveryNotes: formData.deliveryNotes,
+      total: parseFloat(cart.total || 0) + 5, // Add delivery fee
+      subtotal: parseFloat(cart.total || 0),
+      deliveryFee: 5,
+      paymentMethod: formData.paymentMethod === 'cash' ? 'Cash on Delivery' : 'Credit/Debit Card',
+      cardDetails: formData.paymentMethod === 'card' ? {
+        lastFourDigits: formData.cardNumber.slice(-4)
+      } : null
+    }
+
+    // Save order to context
+    createOrder(orderId, orderData)
+
+    // Clear cart and navigate to tracking page
     clearCart()
-    navigate('/')
+    navigate(`/track-order/${orderId}`)
   }
 
   if (!cart.items || cart.items.length === 0) {
     return (
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="text-6xl mb-4">🛒</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8 text-center">
+          <div className="text-5xl sm:text-6xl mb-4">🛒</div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
           <p className="text-gray-600 mb-6">Add some items before checking out</p>
           <button
             onClick={() => navigate('/')}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
+            className="bg-gradient-to-r bg-blue-100 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purpe-700 transition-all"
           >
             Browse Restaurants
           </button>
@@ -90,21 +136,21 @@ function Checkout() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-8">
-      <div className="flex items-center gap-2 mb-6">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="flex items-center gap-2 mb-4 sm:mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="text-white flex items-center gap-2 transition-colors"
+          className="text-white flex items-center gap-2 transition-colors text-sm sm:text-base"
         >
           ← Back
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Order Summary - appears first on mobile, second on desktop */}
         <div className="lg:col-span-1 order-1 lg:order-2">
-          <div className="bg-white rounded-lg shadow-lg p-6 lg:sticky lg:top-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Order Summary</h2>
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 lg:sticky lg:top-8">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Order Summary</h2>
 
             {cart.restaurant_name && (
               <div className="bg-gradient-to-r from-white to-blue-50 border border-blue-200 p-3 rounded-lg mb-4">
@@ -113,19 +159,19 @@ function Checkout() {
               </div>
             )}
 
-            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 mb-4 max-h-64 overflow-y-auto">
               {cart.items.map((item) => (
-                <div key={item.cart_item_id} className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{item.name}</p>
-                    <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                <div key={item.cart_item_id} className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 text-sm sm:text-base truncate">{item.name}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Qty: {item.quantity}</p>
                   </div>
-                  <p className="font-semibold text-gray-800">${item.subtotal.toFixed(2)}</p>
+                  <p className="font-semibold text-gray-800 text-sm sm:text-base whitespace-nowrap">${item.subtotal.toFixed(2)}</p>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-gray-200 pt-4 space-y-2">
+            <div className="border-t border-gray-200 pt-3 sm:pt-4 space-y-2 text-sm sm:text-base">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span>${cart.total?.toFixed(2) || '0.00'}</span>
@@ -134,7 +180,7 @@ function Checkout() {
                 <span>Delivery Fee</span>
                 <span>$5.00</span>
               </div>
-              <div className="flex justify-between text-lg font-bold text-gray-800 pt-2 border-t">
+              <div className="flex justify-between text-base sm:text-lg font-bold text-gray-800 pt-2 border-t">
                 <span>Total</span>
                 <span>${(parseFloat(cart.total || 0) + 5).toFixed(2)}</span>
               </div>
@@ -144,13 +190,13 @@ function Checkout() {
 
         {/* Form - appears second on mobile, first on desktop */}
         <div className="lg:col-span-2 order-2 lg:order-1">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-6">Checkout</h1>
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 md:p-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 sm:mb-6">Checkout</h1>
 
             <form onSubmit={handleSubmit}>
               {/* Contact Information */}
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Contact Information</h2>
+              <div className="mb-6 sm:mb-8">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">Contact Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -161,9 +207,8 @@ function Checkout() {
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        errors.fullName ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.fullName ? 'border-red-500' : 'border-gray-300'
+                        }`}
                       placeholder="John Doe"
                     />
                     {errors.fullName && (
@@ -180,9 +225,8 @@ function Checkout() {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        errors.email ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.email ? 'border-red-500' : 'border-gray-300'
+                        }`}
                       placeholder="john@example.com"
                     />
                     {errors.email && (
@@ -199,10 +243,9 @@ function Checkout() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        errors.phone ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      placeholder="(123) 456-7890"
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      placeholder="(+852) 1234 5678"
                     />
                     {errors.phone && (
                       <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
@@ -224,9 +267,8 @@ function Checkout() {
                       name="address"
                       value={formData.address}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        errors.address ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.address ? 'border-red-500' : 'border-gray-300'
+                        }`}
                       placeholder="123 Main Street, Apt 4B"
                     />
                     {errors.address && (
@@ -234,44 +276,21 @@ function Checkout() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        City *
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          errors.city ? 'border-red-500' : 'border-gray-300'
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      District *
+                    </label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.city ? 'border-red-500' : 'border-gray-300'
                         }`}
-                        placeholder="San Francisco"
-                      />
-                      {errors.city && (
-                        <p className="text-red-500 text-sm mt-1">{errors.city}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ZIP Code *
-                      </label>
-                      <input
-                        type="text"
-                        name="zipCode"
-                        value={formData.zipCode}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          errors.zipCode ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="94102"
-                      />
-                      {errors.zipCode && (
-                        <p className="text-red-500 text-sm mt-1">{errors.zipCode}</p>
-                      )}
-                    </div>
+                    />
+                    {errors.city && (
+                      <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+                    )}
                   </div>
 
                   <div>
@@ -282,7 +301,7 @@ function Checkout() {
                       name="deliveryNotes"
                       value={formData.deliveryNotes}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                       placeholder="Leave at door, Ring doorbell, etc."
                       rows="3"
                     />
@@ -294,28 +313,36 @@ function Checkout() {
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Payment Method</h2>
                 <div className="space-y-3 mb-4">
-                  <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.paymentMethod === 'cash'
+                    ? 'border-blue-400 bg-blue-400 text-white'
+                    : 'border-gray-300 bg-white hover:bg-gray-50'
+                    }`}>
                     <input
                       type="radio"
                       name="paymentMethod"
                       value="cash"
                       checked={formData.paymentMethod === 'cash'}
                       onChange={handleInputChange}
-                      className="w-5 h-5 text-blue-600"
+                      className="w-5 h-5 text-blue-600 flex-shrink-0"
                     />
-                    <span className="ml-3 text-gray-800 font-medium">Cash on Delivery</span>
+                    <span className={`ml-3 font-medium ${formData.paymentMethod === 'cash' ? 'text-white' : 'text-gray-800'
+                      }`}>Cash on Delivery</span>
                   </label>
 
-                  <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <label className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.paymentMethod === 'card'
+                    ? 'border-blue-400 bg-blue-400 text-white'
+                    : 'border-gray-300 bg-white hover:bg-gray-50'
+                    }`}>
                     <input
                       type="radio"
                       name="paymentMethod"
                       value="card"
                       checked={formData.paymentMethod === 'card'}
                       onChange={handleInputChange}
-                      className="w-5 h-5 text-blue-600"
+                      className="w-5 h-5 text-blue-600 flex-shrink-0"
                     />
-                    <span className="ml-3 text-gray-800 font-medium">Credit/Debit Card</span>
+                    <span className={`ml-3 font-medium ${formData.paymentMethod === 'card' ? 'text-white' : 'text-gray-800'
+                      }`}>Credit/Debit Card</span>
                   </label>
                 </div>
 
@@ -330,9 +357,8 @@ function Checkout() {
                         name="cardNumber"
                         value={formData.cardNumber}
                         onChange={handleInputChange}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          errors.cardNumber ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.cardNumber ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         placeholder="1234 5678 9012 3456"
                       />
                       {errors.cardNumber && (
@@ -350,9 +376,8 @@ function Checkout() {
                           name="cardExpiry"
                           value={formData.cardExpiry}
                           onChange={handleInputChange}
-                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            errors.cardExpiry ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.cardExpiry ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="MM/YY"
                         />
                         {errors.cardExpiry && (
@@ -369,9 +394,8 @@ function Checkout() {
                           name="cardCVV"
                           value={formData.cardCVV}
                           onChange={handleInputChange}
-                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            errors.cardCVV ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${errors.cardCVV ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="123"
                         />
                         {errors.cardCVV && (

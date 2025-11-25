@@ -1,13 +1,13 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 const CartContext = createContext()
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState({ items: [], total: 0 })
+  const [cart, setCart] = useState({ items: [], total: 0, restaurant_name: null })
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const API_URL = 'http://localhost:3001/api'
   const USER_ID = 1 // Temporary user ID
 
   // Fetch cart on mount
@@ -17,11 +17,51 @@ export function CartProvider({ children }) {
 
   const fetchCart = async () => {
     try {
-      const response = await fetch(`${API_URL}/cart?userId=${USER_ID}`)
-      const data = await response.json()
+      // Fetch cart items with menu item details
+      const { data: cartItems, error } = await supabase
+        .from('cart_items')
+        .select(`
+          *,
+          menu_items (
+            id,
+            name,
+            price,
+            image_url,
+            restaurant_id,
+            restaurants (
+              id,
+              name
+            )
+          )
+        `)
+        .eq('user_id', USER_ID)
 
-      if (data.success) {
-        setCart(data.data)
+      if (error) {
+        console.error('Error fetching cart:', error)
+        return
+      }
+
+      // Calculate cart data
+      if (cartItems && cartItems.length > 0) {
+        const items = cartItems.map(item => ({
+          cart_item_id: item.id,
+          name: item.menu_items.name,
+          price: item.menu_items.price,
+          image_url: item.menu_items.image_url,
+          quantity: item.quantity,
+          subtotal: item.menu_items.price * item.quantity,
+        }))
+
+        const total = items.reduce((sum, item) => sum + item.subtotal, 0)
+        const restaurant_name = cartItems[0]?.menu_items?.restaurants?.name || null
+
+        setCart({
+          items,
+          total,
+          restaurant_name,
+        })
+      } else {
+        setCart({ items: [], total: 0, restaurant_name: null })
       }
     } catch (error) {
       console.error('Error fetching cart:', error)
@@ -31,28 +71,45 @@ export function CartProvider({ children }) {
   const addToCart = async (menuItem, restaurantId, quantity = 1) => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/cart`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: USER_ID,
-          menuItemId: menuItem.id,
-          restaurantId: restaurantId,
-          quantity: quantity,
-        }),
-      })
 
-      const data = await response.json()
+      // Check if item already exists in cart
+      const { data: existingItem } = await supabase
+        .from('cart_items')
+        .select('*')
+        .eq('user_id', USER_ID)
+        .eq('menu_item_id', menuItem.id)
+        .single()
 
-      if (data.success) {
-        setCart(data.data)
-        setIsCartOpen(true)
-        return { success: true, message: 'Item added to cart!' }
+      if (existingItem) {
+        // Update quantity if item exists
+        const { error } = await supabase
+          .from('cart_items')
+          .update({ quantity: existingItem.quantity + quantity })
+          .eq('id', existingItem.id)
+
+        if (error) {
+          console.error('Error updating cart item:', error)
+          return { success: false, message: 'Failed to add item to cart' }
+        }
       } else {
-        return { success: false, message: data.message || 'Failed to add item to cart' }
+        // Insert new item
+        const { error } = await supabase
+          .from('cart_items')
+          .insert({
+            user_id: USER_ID,
+            menu_item_id: menuItem.id,
+            quantity: quantity,
+          })
+
+        if (error) {
+          console.error('Error adding to cart:', error)
+          return { success: false, message: 'Failed to add item to cart' }
+        }
       }
+
+      await fetchCart()
+      setIsCartOpen(true)
+      return { success: true, message: 'Item added to cart!' }
     } catch (error) {
       console.error('Error adding to cart:', error)
       return { success: false, message: 'Error adding to cart' }
@@ -64,21 +121,23 @@ export function CartProvider({ children }) {
   const updateQuantity = async (cartItemId, quantity) => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/cart/${cartItemId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: USER_ID,
-          quantity: quantity,
-        }),
-      })
 
-      const data = await response.json()
+      if (quantity <= 0) {
+        // Remove item if quantity is 0 or less
+        await removeFromCart(cartItemId)
+        return
+      }
 
-      if (data.success) {
-        setCart(data.data)
+      const { error } = await supabase
+        .from('cart_items')
+        .update({ quantity })
+        .eq('id', cartItemId)
+        .eq('user_id', USER_ID)
+
+      if (error) {
+        console.error('Error updating quantity:', error)
+      } else {
+        await fetchCart()
       }
     } catch (error) {
       console.error('Error updating quantity:', error)
@@ -90,14 +149,17 @@ export function CartProvider({ children }) {
   const removeFromCart = async (cartItemId) => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/cart/${cartItemId}?userId=${USER_ID}`, {
-        method: 'DELETE',
-      })
 
-      const data = await response.json()
+      const { error } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('id', cartItemId)
+        .eq('user_id', USER_ID)
 
-      if (data.success) {
-        setCart(data.data)
+      if (error) {
+        console.error('Error removing from cart:', error)
+      } else {
+        await fetchCart()
       }
     } catch (error) {
       console.error('Error removing from cart:', error)
@@ -109,14 +171,16 @@ export function CartProvider({ children }) {
   const clearCart = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/cart?userId=${USER_ID}`, {
-        method: 'DELETE',
-      })
 
-      const data = await response.json()
+      const { error } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', USER_ID)
 
-      if (data.success) {
-        setCart(data.data)
+      if (error) {
+        console.error('Error clearing cart:', error)
+      } else {
+        await fetchCart()
       }
     } catch (error) {
       console.error('Error clearing cart:', error)
