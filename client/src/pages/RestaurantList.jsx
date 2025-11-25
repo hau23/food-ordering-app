@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import RestaurantCard from '../components/RestaurantCard'
+import LoadingScreen from '../components/LoadingScreen'
 import { supabase } from '../lib/supabase'
 
 function RestaurantList() {
@@ -9,6 +10,8 @@ function RestaurantList() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCuisine, setSelectedCuisine] = useState('All')
   const [cuisineTypes, setCuisineTypes] = useState(['All'])
+  const [initialLoad, setInitialLoad] = useState(true)
+  const [showContent, setShowContent] = useState(false)
 
   useEffect(() => {
     fetchCuisineTypes()
@@ -67,7 +70,15 @@ function RestaurantList() {
       console.error('Error fetching restaurants:', err)
     } finally {
       setLoading(false)
+      // Only set initialLoad to false after the first load
+      if (initialLoad) {
+        setInitialLoad(false)
+      }
     }
+  }
+
+  const handleAnimationComplete = () => {
+    setShowContent(true)
   }
 
   const handleClearFilters = () => {
@@ -76,9 +87,25 @@ function RestaurantList() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      {/* Search and Filter Section */}
-      <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
+    <>
+      {/* Loading Screen - only shows on initial load */}
+      {initialLoad && (
+        <LoadingScreen
+          isLoading={loading}
+          onAnimationComplete={handleAnimationComplete}
+        />
+      )}
+
+      {/* Main Content - hidden until animation completes on initial load */}
+      <main
+        className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8"
+        style={{
+          opacity: initialLoad && !showContent ? 0 : 1,
+          transition: 'opacity 0.3s ease-in'
+        }}
+      >
+        {/* Search and Filter Section */}
+        <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Find Restaurants</h2>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -202,6 +229,7 @@ function RestaurantList() {
         </>
       )}
     </main>
+  </>
   )
 }
 
