@@ -17,12 +17,12 @@ function Header() {
       <div className="mx-auto px-3 sm:px-4 md:px-6 py-2 md:py-3">
         <div className="flex items-center justify-between gap-2">
           {/* Left side - App name/logo */}
-          <Link to="/" className="flex items-center gap-1 sm:gap-2 hover:opacity-90 transition-opacity flex-shrink-0">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20">
+          <Link to="/" className="flex items-center gap-1 sm:gap-2 hover:opacity-90 transition-opacity shrink-0">
+            <div className="w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20">
               <img src={logo} alt="Birdee Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-sm sm:text-base md:text-xl font-bold text-white">Birdee</h1>
+              <h1 className="text-xs sm:text-base md:text-xl font-bold text-white">Birdee</h1>
               <p className="text-xs text-white hidden sm:block">Food Ordering and Delivery</p>
             </div>
           </Link>
